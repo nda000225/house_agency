@@ -1,6 +1,9 @@
 import * as config from "../config.js";
 import jwt from "jsonwebtoken";
 import { emailTemplate } from "../helpers/email.js";
+import { hashPassword, comparePassword } from "../helpers/auth.js";
+import { nanoid } from "nanoid";
+import User from "../models/User.js";
 
 export const preRegister = async (req, res) => {
   //créer jwt avec e-mail et mot de passe puis e-mail en tant que lien cliquable
@@ -41,12 +44,30 @@ export const preRegister = async (req, res) => {
 export const register = async (req, res) => {
   try {
     /**decoded token */
-    const {email, password} = jwt.verify(req.body.token, config.JWT_SECRET)
-    console.log(decoded);
+    const { email, password } = jwt.verify(req.body.token, config.JWT_SECRET);
+
+    const hashedPassword = await hashPassword(password);
+    const user = await new User({
+      username: nanoid(6),
+      email,
+      password: hashedPassword,
+    }).save();
+
+    const token = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    const refreshToken = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    user.password = undefined;
+    user.resetCode = undefined;
+
+    return res.json({ token, refreshToken, user });
   } catch (err) {
     console.log(err);
-    return res.json({
-      error: "Quelque chose s'est mal passé. Essayer à nouveau.",
-    });
+    // return res.json({
+    //   error: "Quelque chose s'est mal passé. Essayer à nouveau.",
+    // });
   }
 };
