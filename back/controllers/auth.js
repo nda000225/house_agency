@@ -40,7 +40,9 @@ export const preRegister = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    console.log(req.body);
+    /**decoded token */
+    const {email, password} = jwt.verify(req.body.token, config.JWT_SECRET)
+    console.log(decoded);
   } catch (err) {
     console.log(err);
     return res.json({
