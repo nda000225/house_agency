@@ -225,3 +225,15 @@ export const currentUser = async (req, res) => {
     return res.status(403).json({ error: "Vous n'etes pas autorisés" });
   }
 };
+
+export const publicProfile = async (req, res) => {
+  try {
+    const user = await User.findOne({username: req.params.username});
+    user.password = undefined;
+    user.resetCode = undefined;
+    return res.json(user);
+  } catch (err) {
+    console.log(err);
+    return res.json({ error: "Utilisateur non trouvé" });
+  }
+};
