@@ -143,6 +143,9 @@ export const login = async (req, res) => {
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    if (!validator.validate(email)) {
+      return res.json({ error: "Une adresse mail valide est requise" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -155,11 +158,10 @@ export const forgotPassword = async (req, res) => {
       const token = jwt.sign({ resetCode }, config.JWT_SECRET, {
         expiresIn: "60m",
       });
-      // save to user db
+
       user.resetCode = resetCode;
       user.save();
 
-      // send email
       config.AWSSES.sendEmail(
         emailTemplate(
           email,
@@ -172,17 +174,42 @@ export const forgotPassword = async (req, res) => {
         ),
         (err, data) => {
           if (err) {
-            return res.json({
-              error: "Donnez une adresse de messagerie valide",
-            });
+            console.log(err);
+            return res.json({ ok: false });
           } else {
-            return res.json({
-              error: "Vérifiez l'e-mail afin d'accéder à votre compte",
-            });
+            console.log(data);
+            return res.json({ ok: true });
           }
         }
       );
     }
+  } catch (err) {
+    console.log(err);
+    res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
+  }
+};
+
+export const accessAccount = async (req, res) => {
+  try {
+    const {resetCode} = jwt.verify(req.body.resetCode, config.JWT_SECRET)
+    const user = await User.findOneAndUpdate({resetCode}, {resetCode: ""})
+
+    const token = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    const refreshToken = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    user.password = undefined;
+    user.resetCode = undefined;
+    
+    res.json({
+      user,
+      token,
+      refreshToken,
+    });
+
   } catch (err) {
     console.log(err);
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
