@@ -6,7 +6,7 @@ import { hashPassword, comparePassword } from "../helpers/auth.js";
 import { nanoid } from "nanoid";
 import User from "../models/User.js";
 
-const tokenAndUserResponse = (req,res,user) => {
+const tokenAndUserResponse = (req, res, user) => {
   const token = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
     expiresIn: "1h",
   });
@@ -83,10 +83,10 @@ export const register = async (req, res) => {
   try {
     /**decoded token */
     const { email, password } = jwt.verify(req.body.token, config.JWT_SECRET);
-     const userExist = await User.findOne({ email });
-     if (userExist) {
-       return res.json({ error: "Cette addresse exist déjà" });
-     }
+    const userExist = await User.findOne({ email });
+    if (userExist) {
+      return res.json({ error: "Cette addresse exist déjà" });
+    }
 
     const hashedPassword = await hashPassword(password);
     const user = new User({
@@ -214,4 +214,14 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-
+export const currentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.password = undefined;
+    user.resetCode = undefined;
+    return res.json(user);
+  } catch (err) {
+    console.log(err);
+    return res.status(403).json({ error: "Vous n'etes pas autorisés" });
+  }
+};
