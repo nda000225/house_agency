@@ -228,12 +228,33 @@ export const currentUser = async (req, res) => {
 
 export const publicProfile = async (req, res) => {
   try {
-    const user = await User.findOne({username: req.params.username});
+    const user = await User.findOne({ username: req.params.username });
     user.password = undefined;
     user.resetCode = undefined;
     return res.json(user);
   } catch (err) {
     console.log(err);
     return res.json({ error: "Utilisateur non trouvé" });
+  }
+};
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.json({ error: "Mot de passe requis" });
+    }
+    if (password && password?.length < 6) {
+      return res.json({
+        error: "Mot de passe doit comprendre au moins 6 caractères",
+      });
+    }
+    const user = await User.findByIdAndUpdate(req.user._id, {
+      password: await hashPassword(password),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.log(err);
+    return res.status(403).json({ error: "Vous n'etes pas autorisés" });
   }
 };
