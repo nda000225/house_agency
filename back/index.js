@@ -2,8 +2,9 @@ import express from "express";
 import morgan from "morgan";
 import cors from "cors";
 import mongoose from "mongoose";
-import { DATABASE } from "./config.js";
+import { DATABASE, PORT } from "./config.js";
 import authRoutes  from './routes/auth.js'
+
 
 const app = express();
 
@@ -25,4 +26,4 @@ app.get("/", (req, res) => {
   });
 });
 
-app.listen(4001, () => {console.log("Server runing on 4001")});
+app.listen(PORT, () => {console.log(`Server runing on ${PORT}`)});
