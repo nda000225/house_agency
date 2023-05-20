@@ -1,5 +1,6 @@
 import * as config from "../config.js";
 import jwt from "jsonwebtoken";
+import validator from 'email-validator'
 import { emailTemplate } from "../helpers/email.js";
 import { hashPassword, comparePassword } from "../helpers/auth.js";
 import { nanoid } from "nanoid";
@@ -13,9 +14,24 @@ export const preRegister = async (req, res) => {
    */
   try {
     const { email, password } = req.body;
+    if(!validator.validate(email)){
+      return res.json({ error: "Une adresse courriel valide est requise"});
+    }
+    if(!password){
+      return res.json({ error: "Mot de passe requis"});
+    }
+    if(password && password?.length < 6){
+      return res.json({ error: "Mot de passe doit comprendre au moins 6 caractères"});
+    }
+
+    const user = await User.findOne({email})
+    if(user){
+      return res.json({error: "Cette addresse exist déjà"})
+    }
     const token = jwt.sign({ email, password }, config.JWT_SECRET, {
       expiresIn: "1h",
     });
+
     config.AWSSES.sendEmail(
       emailTemplate(
         email,
@@ -74,4 +90,3 @@ export const register = async (req, res) => {
     });
   }
 };
-//fix user registration error in database
