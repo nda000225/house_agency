@@ -139,3 +139,52 @@ export const login = async (req, res) => {
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
   }
 };
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.json({
+        error: "Impossible de trouver l'utilisateur avec cet e-mail",
+      });
+    } else {
+      const resetCode = nanoid();
+
+      const token = jwt.sign({ resetCode }, config.JWT_SECRET, {
+        expiresIn: "60m",
+      });
+      // save to user db
+      user.resetCode = resetCode;
+      user.save();
+
+      // send email
+      config.AWSSES.sendEmail(
+        emailTemplate(
+          email,
+          `
+        <p>Veuillez cliquer sur le lien ci-dessous pour accéder à votre compte.</p>
+        <a href="${config.CLIENT_URL}/auth/access-password/${token}">Accéder à mon compte</a>
+    `,
+          config.REPLY_TO,
+          "Accéder à votre compte"
+        ),
+        (err, data) => {
+          if (err) {
+            return res.json({
+              error: "Donnez une adresse de messagerie valide",
+            });
+          } else {
+            return res.json({
+              error: "Vérifiez l'e-mail afin d'accéder à votre compte",
+            });
+          }
+        }
+      );
+    }
+  } catch (err) {
+    console.log(err);
+    res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
+  }
+};
