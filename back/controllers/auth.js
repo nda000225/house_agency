@@ -1,11 +1,10 @@
 import * as config from "../config.js";
 import jwt from "jsonwebtoken";
-import validator from 'email-validator'
+import validator from "email-validator";
 import { emailTemplate } from "../helpers/email.js";
 import { hashPassword, comparePassword } from "../helpers/auth.js";
 import { nanoid } from "nanoid";
 import User from "../models/User.js";
-
 
 export const preRegister = async (req, res) => {
   /**
@@ -14,19 +13,21 @@ export const preRegister = async (req, res) => {
    */
   try {
     const { email, password } = req.body;
-    if(!validator.validate(email)){
-      return res.json({ error: "Une adresse courriel valide est requise"});
+    if (!validator.validate(email)) {
+      return res.json({ error: "Une adresse mail valide est requise" });
     }
-    if(!password){
-      return res.json({ error: "Mot de passe requis"});
+    if (!password) {
+      return res.json({ error: "Mot de passe requis" });
     }
-    if(password && password?.length < 6){
-      return res.json({ error: "Mot de passe doit comprendre au moins 6 caractères"});
+    if (password && password?.length < 6) {
+      return res.json({
+        error: "Mot de passe doit comprendre au moins 6 caractères",
+      });
     }
 
-    const user = await User.findOne({email})
-    if(user){
-      return res.json({error: "Cette addresse exist déjà"})
+    const user = await User.findOne({ email });
+    if (user) {
+      return res.json({ error: "Cette addresse exist déjà" });
     }
     const token = jwt.sign({ email, password }, config.JWT_SECRET, {
       expiresIn: "1h",
@@ -88,5 +89,53 @@ export const register = async (req, res) => {
     return res.json({
       error: "Quelque chose s'est mal passé. Essayer à nouveau.",
     });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+       if (!validator.validate(email)) {
+         return res.json({ error: "Une adresse mail valide est requise" });
+       }
+       if (!password) {
+         return res.json({ error: "Mot de passe requis" });
+       }
+       if (password && password?.length < 6) {
+         return res.json({
+           error: "Mot de passe doit comprendre au moins 6 caractères",
+         });
+       }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({ error: "Veuillez d'abord vous inscrire." });
+    }
+
+    const match = await comparePassword(password, user.password);
+    if (!match) {
+      return res.json({
+        error: "Mauvais mot de passe",
+      });
+    }
+
+    const token = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    const refreshToken = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    user.password = undefined;
+    user.resetCode = undefined;
+
+    res.json({
+      user,
+      token,
+      refreshToken,
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
   }
 };
