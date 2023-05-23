@@ -109,7 +109,7 @@ export const register = async (req, res) => {
     }
 
     const hashedPassword = await hashPassword(password);
-    const user = new User({
+    const user = await new User({
       username: nanoid(6),
       email,
       password: hashedPassword,
@@ -130,9 +130,9 @@ export const login = async (req, res) => {
     if (!validator.validate(email)) {
       return res.json({ error: "Une adresse mail valide est requise" });
     }
-      if (!email) {
-        return res.json({ error: "Adresse Email réquise" });
-      }
+    if (!email) {
+      return res.json({ error: "Adresse Email réquise" });
+    }
     if (!password) {
       return res.json({ error: "Mot de passe requis" });
     }
@@ -154,7 +154,7 @@ export const login = async (req, res) => {
       });
     }
 
-    tokenAndUserResponse( res, user);
+    tokenAndUserResponse(res, user);
   } catch (err) {
     console.log(err);
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
@@ -215,7 +215,7 @@ export const accessAccount = async (req, res) => {
     const { resetCode } = jwt.verify(req.body.resetCode, config.JWT_SECRET);
     const user = await User.findOneAndUpdate({ resetCode }, { resetCode: "" });
 
-    tokenAndUserResponse( res, user);
+    tokenAndUserResponse(res, user);
   } catch (err) {
     console.log(err);
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
@@ -228,7 +228,7 @@ export const refreshToken = async (req, res) => {
 
     const user = await User.findById({ _id });
 
-    tokenAndUserResponse( res, user);
+    tokenAndUserResponse(res, user);
   } catch (err) {
     console.log(err);
     return res
@@ -272,16 +272,18 @@ export const updatePassword = async (req, res) => {
         error: "Mot de passe doit comprendre au moins 6 caractères",
       });
     }
-    const user = await User.findById(req.user._id);
-    const hashedPassword = await hashPassword(password);
+    // const user = await User.findById(req.user._id);
+    // console.log(user)
+    // const hashedPassword = await hashPassword(password);
 
-    await User.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-    });
-    // const user = await User.findByIdAndUpdate(req.user._id, {
-    //   password: await hashPassword(password),
+    // await User.findByIdAndUpdate(user._id, {
+    //   password: hashedPassword,
     // });
-    res.json({ ok: true });
+    const user = await User.findByIdAndUpdate(req.user._id, {
+      password: await hashPassword(password),
+    });
+    console.log(user)
+    return res.json({ ok: true });
   } catch (err) {
     console.log(err);
     return res.status(403).json({ error: "Vous n'etes pas autorisés" });
