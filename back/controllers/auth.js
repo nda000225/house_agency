@@ -24,6 +24,23 @@ const tokenAndUserResponse = (res, user) => {
   });
 };
 
+const emailAndPasswordValidation = (email, password) => {
+  if (!validator.validate(email)) {
+    return res.json({ error: "Une adresse mail valide est requise" });
+  }
+  if (!email) {
+    return res.json({ error: "Adresse Email réquise" });
+  }
+  if (!password) {
+    return res.json({ error: "Mot de passe requis" });
+  }
+  if (password && password?.length < 6) {
+    return res.json({
+      error: "Mot de passe doit comprendre au moins 6 caractères",
+    });
+  }
+};
+
 export const preRegister = async (req, res) => {
   /**
    * créer jwt avec e-mail et mot de passe puis e-mail en tant que lien cliquable
@@ -33,6 +50,9 @@ export const preRegister = async (req, res) => {
     const { email, password } = req.body;
     if (!validator.validate(email)) {
       return res.json({ error: "Une adresse mail valide est requise" });
+    }
+    if (!email) {
+      return res.json({ error: "Adresse Email réquise" });
     }
     if (!password) {
       return res.json({ error: "Mot de passe requis" });
@@ -110,6 +130,9 @@ export const login = async (req, res) => {
     if (!validator.validate(email)) {
       return res.json({ error: "Une adresse mail valide est requise" });
     }
+      if (!email) {
+        return res.json({ error: "Adresse Email réquise" });
+      }
     if (!password) {
       return res.json({ error: "Mot de passe requis" });
     }
