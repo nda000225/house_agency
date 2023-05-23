@@ -6,7 +6,7 @@ import { hashPassword, comparePassword } from "../helpers/auth.js";
 import { nanoid } from "nanoid";
 import User from "../models/User.js";
 
-const tokenAndUserResponse = (req, res, user) => {
+const tokenAndUserResponse = (res, user) => {
   const token = jwt.sign({ _id: user._id }, config.JWT_SECRET, {
     expiresIn: "1h",
   });
@@ -17,7 +17,7 @@ const tokenAndUserResponse = (req, res, user) => {
   user.password = undefined;
   user.resetCode = undefined;
 
-  res.json({
+  return res.json({
     user,
     token,
     refreshToken,
@@ -95,7 +95,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
     }).save();
 
-    tokenAndUserResponse(req, res, user);
+    tokenAndUserResponse(res, user);
   } catch (err) {
     console.log(err);
     return res.json({
@@ -131,7 +131,7 @@ export const login = async (req, res) => {
       });
     }
 
-    tokenAndUserResponse(req, res, user);
+    tokenAndUserResponse( res, user);
   } catch (err) {
     console.log(err);
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
@@ -192,7 +192,7 @@ export const accessAccount = async (req, res) => {
     const { resetCode } = jwt.verify(req.body.resetCode, config.JWT_SECRET);
     const user = await User.findOneAndUpdate({ resetCode }, { resetCode: "" });
 
-    tokenAndUserResponse(req, res, user);
+    tokenAndUserResponse( res, user);
   } catch (err) {
     console.log(err);
     res.json({ error: "Quelque chose s'est mal passé. Essayer à nouveau." });
@@ -205,7 +205,7 @@ export const refreshToken = async (req, res) => {
 
     const user = await User.findById({ _id });
 
-    tokenAndUserResponse(req, res, user);
+    tokenAndUserResponse( res, user);
   } catch (err) {
     console.log(err);
     return res
@@ -249,12 +249,42 @@ export const updatePassword = async (req, res) => {
         error: "Mot de passe doit comprendre au moins 6 caractères",
       });
     }
-    const user = await User.findByIdAndUpdate(req.user._id, {
-      password: await hashPassword(password),
+    const user = await User.findById(req.user._id);
+    const hashedPassword = await hashPassword(password);
+
+    await User.findByIdAndUpdate(user._id, {
+      password: hashedPassword,
     });
+    // const user = await User.findByIdAndUpdate(req.user._id, {
+    //   password: await hashPassword(password),
+    // });
     res.json({ ok: true });
   } catch (err) {
     console.log(err);
     return res.status(403).json({ error: "Vous n'etes pas autorisés" });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: req.body,
+      },
+      { new: true }
+    );
+    user.password = undefined;
+    user.resetCode = undefined;
+    res.json(user);
+  } catch (err) {
+    console.log(err);
+    if (err.codeName === "DuplicateKey") {
+      return res.json({
+        error: "Le nom ou l'adresse email de l'utilisateur est déjà pris",
+      });
+    } else {
+      return res.status(403).json({ error: "Vous n'etes pas autorisés" });
+    }
   }
 };
