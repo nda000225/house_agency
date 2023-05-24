@@ -170,25 +170,24 @@ export const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      res.json({
+      return res.json({
         error: "Impossible de trouver l'utilisateur avec cet e-mail",
       });
     } else {
       const resetCode = nanoid();
-
-      const token = jwt.sign({ resetCode }, config.JWT_SECRET, {
-        expiresIn: "60m",
-      });
-
       user.resetCode = resetCode;
       user.save();
+
+      const token = jwt.sign({ resetCode }, config.JWT_SECRET, {
+        expiresIn: "1h",
+      });
 
       config.AWSSES.sendEmail(
         emailTemplate(
           email,
           `
         <p>Veuillez cliquer sur le lien ci-dessous pour accéder à votre compte.</p>
-        <a href="${config.CLIENT_URL}/auth/access-password/${token}">Accéder à mon compte</a>
+        <a href="${config.CLIENT_URL}/auth/access-account/${token}">Accéder à mon compte</a>
     `,
           config.REPLY_TO,
           "Accéder à votre compte"
@@ -272,17 +271,10 @@ export const updatePassword = async (req, res) => {
         error: "Mot de passe doit comprendre au moins 6 caractères",
       });
     }
-    // const user = await User.findById(req.user._id);
-    // console.log(user)
-    // const hashedPassword = await hashPassword(password);
-
-    // await User.findByIdAndUpdate(user._id, {
-    //   password: hashedPassword,
-    // });
     const user = await User.findByIdAndUpdate(req.user._id, {
       password: await hashPassword(password),
     });
-    console.log(user)
+    console.log(user);
     return res.json({ ok: true });
   } catch (err) {
     console.log(err);
@@ -292,13 +284,9 @@ export const updatePassword = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user._id, req.body, {
+      new: true,
+    });
     user.password = undefined;
     user.resetCode = undefined;
     res.json(user);
